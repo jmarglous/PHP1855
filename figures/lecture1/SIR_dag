@@ -1,0 +1,8 @@
+digraph dag {
+	graph [rankdir=LR]
+	S [label=S]
+	I [label=I]
+	R [label=R]
+	S -> I [label="λ"]
+	I -> R [label=r]
+}
