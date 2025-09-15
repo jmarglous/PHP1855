@@ -1,0 +1,135 @@
+---
+title: "Assignment1"
+output: pdf_document
+date: "2024-09-11"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Basic SIR model
+
+### this function sets up the basic "closed" SIR model
+
+```{r}
+library(deSolve) 
+
+sirmod = function(t, startconds, parms) { # inputs into the model are "t" 
+  #- time, startconds = starting conditions and parms = parameters
+  S = startconds[1]
+  I = startconds[2]
+  R = startconds[3]
+  beta = parms["beta"]
+  gamma = parms["gamma"]
+  N = parms["N"]
+  dS = - beta * S * I/N
+  dI = beta * S * I/N - gamma * I
+  dR = gamma * I 
+  res = c(dS, dI, dR)
+  list(res)
+}
+
+## inputs into the model
+times = seq(0, 26, by = 1/10) # weeks
+parms = c(N = 1, beta = 2, gamma = 1/2) # in weeks
+startconds = c(S = 0.999, I = 0.001, R = 0)
+
+# run the model
+out = ode(y = startconds, times = times, func = sirmod, parms = parms)
+out = as.data.frame(out)
+
+plot(times, out$S,type= "l", lwd = 2, col="dodgerblue",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion S/I/R")
+lines(times, out$I, lwd = 2, col = "firebrick")
+lines(times, out$R, lwd = 2, col = "purple")
+legend(20,0.6,lty = c(1,1,1), lwd = c(2,2,2),col = c("dodgerblue", "firebrick","purple"), legend = c("S","I","R"))
+```
+
+## 1a) what is the epidemic peak size (proportion infected at the peak of the outbreak)?
+
+```{r}
+N
+max(I)/max(N)
+```
+The epidemic peak size is .5426.
+
+## 1b) what is the total proportion of the population ever infected?
+
+```{r}
+R[[length(R)]]/max(N)
+```
+98.36% of the population is ever infected. 
+
+## 1c) what is the infectious period (/duration of infectiousness) for this model?
+
+D = 2.
+(D is the inverse of gamma and gamma is set to 1/2)
+
+## 1d) what is the is the R0 of this infection?
+R0 = (beta-gamma)/gamma  
+```{r}
+(2-.5)/2
+```
+
+R0 = .75
+
+## 1e) Plot R_effective. In which week does R_effective go below 1? What happens to cases at this point?
+
+R_eff = beta/gamma *S. 
+
+```{r}
+R_eff <- 2/.5 * S
+R_eff
+
+plot(R_eff, type = 'l', lwd = 2, col = 'purple')
+```
+
+```{r}
+R_eff_less <- which(R_eff < 1)
+first_week <- R_eff_less[1]
+first_week
+```
+
+## 1f) Re-run the model assuming R0 has doubled (assume the infectious period stays the same). Plot the output with overlaid S, I and R time series. 
+```{r}
+## inputs into the model
+times = seq(0, 26, by = 1/10) # weeks
+parms = c(N = 1, beta = 4, gamma = 1/2) # in weeks
+startconds = c(S = 0.999, I = 0.001, R = 0)
+
+# run the model
+out = ode(y = startconds, times = times, func = sirmod, parms = parms)
+out = as.data.frame(out)
+
+plot(times, out$S,type= "l", lwd = 2, col="dodgerblue",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion S/I/R")
+lines(times, out$I, lwd = 2, col = "firebrick")
+lines(times, out$R, lwd = 2, col = "purple")
+legend(20,0.6,lty = c(1,1,1), lwd = c(2,2,2),col = c("dodgerblue", "firebrick","purple"), legend = c("S","I","R"))
+
+```
+## What is the proportion infected at the peak size of the outbreak now? 
+
+## 2 download the COVID19 data file from canvas ("cases_data_global"). We are going to estimate the early pandemic COVID19 R0 using data from singapore.
+
+## 2a) Plot the singapore time series of cases against date.
+
+## 2b) The case variable is cumulative. Convert the singapore time series to daily incidence. Plot the incidence.
+
+## 2c)  Look at data from days 70 to 90 when epidemic appears to be growing exponentially. Plot logged daily incidence data between days 70:90 - what do you see? interpret the plot .
+
+## 2d) Fit a straight line to the logged incidence data against time. Hint: you'll need to fit a regression line using the lm command. Write down the coefficient on time from your regression model.
+
+## 2e) Use the coefficient on time, to estimate R0. Assume the infectious period is 10 days.
+
+
+
+
+
+
+
+
+
+
