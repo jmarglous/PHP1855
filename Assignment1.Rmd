@@ -49,17 +49,28 @@ legend(20,0.6,lty = c(1,1,1), lwd = c(2,2,2),col = c("dodgerblue", "firebrick","
 ## 1a) what is the epidemic peak size (proportion infected at the peak of the outbreak)?
 
 ```{r}
-N
+N <- parms['N']
+I <- out['I']
 max(I)/max(N)
 ```
-The epidemic peak size is .5426.
+The epidemic peak size is .404.
 
 ## 1b) what is the total proportion of the population ever infected?
 
 ```{r}
-R[[length(R)]]/max(N)
+library('dplyr')
+library('tidyr')
+R_last <- out %>%
+  pull('R') %>%
+  last()
+
+I_last <- out %>%
+  pull('I') %>%
+  last()
+
+R_last + I_last
 ```
-98.36% of the population is ever infected. 
+98.01% of the population is ever infected. Nobody passes back from recovered to infected or susceptible, so the total proportion of the population that is ever infected is the recovered portion at the end of the pandemic, plus the remaining infected (which is basically 0).
 
 ## 1c) what is the infectious period (/duration of infectiousness) for this model?
 
@@ -67,66 +78,141 @@ D = 2.
 (D is the inverse of gamma and gamma is set to 1/2)
 
 ## 1d) what is the is the R0 of this infection?
-R0 = (beta-gamma)/gamma  
+R0 = beta/gamma  
 ```{r}
-(2-.5)/2
+R0 <- 2/(1/2)
+R0 
 ```
 
-R0 = .75
+R0 = 4
 
 ## 1e) Plot R_effective. In which week does R_effective go below 1? What happens to cases at this point?
 
-R_eff = beta/gamma *S. 
+R_eff = R0 *S. 
 
 ```{r}
-R_eff <- 2/.5 * S
-R_eff
+library(ggplot2)
+library(latex2exp)
 
-plot(R_eff, type = 'l', lwd = 2, col = 'purple')
+out$R_eff <- out$S * R0
+ggplot(out, aes(x = time, y = R_eff)) + 
+  geom_line(color = 'blue') + 
+  labs(
+    y = TeX('$R_{eff}$')
+  ) + 
+  theme_minimal()
+
 ```
 
 ```{r}
-R_eff_less <- which(R_eff < 1)
-first_week <- R_eff_less[1]
-first_week
+R_eff_less <- out %>%
+  filter(R_eff < 1) %>%
+  slice(1) %>%
+  pull(time)
+R_eff_less
 ```
+R_e dips below 1 in the 6th week. Cases begin to decrease at this point, because the rate of recovery (gamma) exceeds the rate of new infections (beta).
 
 ## 1f) Re-run the model assuming R0 has doubled (assume the infectious period stays the same). Plot the output with overlaid S, I and R time series. 
 ```{r}
 ## inputs into the model
-times = seq(0, 26, by = 1/10) # weeks
-parms = c(N = 1, beta = 4, gamma = 1/2) # in weeks
+parms2 = c(N = 1, beta = 4, gamma = 1/2) # in weeks
 startconds = c(S = 0.999, I = 0.001, R = 0)
 
 # run the model
-out = ode(y = startconds, times = times, func = sirmod, parms = parms)
-out = as.data.frame(out)
+out2 = ode(y = startconds, times = times, func = sirmod, parms = parms2)
+out2 = as.data.frame(out2)
 
-plot(times, out$S,type= "l", lwd = 2, col="dodgerblue",xlab = "", ylab = "")
+plot(times, out2$S,type= "l", lwd = 2, col="dodgerblue",xlab = "", ylab = "")
 title(xlab = "Time")
 title(ylab = "Proportion S/I/R")
-lines(times, out$I, lwd = 2, col = "firebrick")
-lines(times, out$R, lwd = 2, col = "purple")
+lines(times, out2$I, lwd = 2, col = "firebrick")
+lines(times, out2$R, lwd = 2, col = "purple")
 legend(20,0.6,lty = c(1,1,1), lwd = c(2,2,2),col = c("dodgerblue", "firebrick","purple"), legend = c("S","I","R"))
 
 ```
 ## What is the proportion infected at the peak size of the outbreak now? 
+```{r}
+I_peak = out2$I %>%
+  max()
+
+I_peak
+```
+
+At peak, 61.51% of the population is infected. 
 
 ## 2 download the COVID19 data file from canvas ("cases_data_global"). We are going to estimate the early pandemic COVID19 R0 using data from singapore.
-
+```{r}
+covid <- load('./cases_data_global.RData')
+```
 ## 2a) Plot the singapore time series of cases against date.
-
+```{r}
+sing <- data %>% filter(Country.Region == 'Singapore')
+ggplot(sing, aes(x = time, y = cases)) + 
+  geom_point(color = 'blue')
+```
 ## 2b) The case variable is cumulative. Convert the singapore time series to daily incidence. Plot the incidence.
+```{r}
+sing <- sing %>%
+  mutate(incidence = sing$cases - lag(sing$cases)) 
 
+ggplot(sing, aes(x = time, y= incidence)) + 
+  geom_point(color = 'blue')
+```
 ## 2c)  Look at data from days 70 to 90 when epidemic appears to be growing exponentially. Plot logged daily incidence data between days 70:90 - what do you see? interpret the plot .
+```{r}
+sing <- sing %>%
+  mutate(log_inc = log(sing$incidence))
 
+ggplot(sing[70:90, ], aes(x = time, y = log_inc)) + 
+  geom_line(color = 'blue')
+```
 ## 2d) Fit a straight line to the logged incidence data against time. Hint: you'll need to fit a regression line using the lm command. Write down the coefficient on time from your regression model.
+
+```{r}
+### Remove Inf values
+sing_filt <- sing %>%
+  filter(is.finite(log_inc))
+
+#filter the filtered values to the dame date range as days 70-90
+day70 <- sing %>% slice(70) %>% pull(time)
+day90 <- sing %>% slice(90) %>% pull(time)
+
+sing_filt <- sing_filt %>%
+  filter(time >= as.Date(day70) & time <= as.Date(day90))
+
+
+ggplot(sing_filt, aes(x = time, y = log_inc)) + 
+  geom_line(color = 'blue')
+```
+```{r}
+model_fit <- lm(log_inc ~ time, data = sing_filt)
+model_fit
+```
+The slope of the line is .1604.
+
+```{r}
+sing_filt <- sing_filt %>%
+  mutate(predicted = predict(model_fit, newdata = sing_pred))
+
+ggplot(sing_filt, aes(x = time)) + 
+  geom_point(aes(y = log_inc), color = 'blue') +
+  geom_line(aes(y = predicted), color = 'red')
+
+```
 
 ## 2e) Use the coefficient on time, to estimate R0. Assume the infectious period is 10 days.
 
+R0 = kD + 1. D = 10 and k is the slope of the line above. 
 
+```{r}
+k <- coef(model_fit)['time']
+D <- 10
 
-
+R0_sing <- k*D +1 
+R0_sing
+```
+The estimated R0 is 2.605.
 
 
 
