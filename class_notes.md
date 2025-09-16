@@ -1,3 +1,4 @@
+
 # SIR model
 
 The SIR model is the most simple and widely used model of infectious disease. It consists of three compartments: susceptible (S), infected (I), and recovered (R), with simple flow through these compartments. 
@@ -74,6 +75,9 @@ $$
 \frac{dR}{dt} &=& \gamma I
 \end{eqnarray}
 $$
+We can simulate this model forward in time to see what the compartments look like:
+![[./figures/lecture1/SIR_forward_sim.png]]
+
 Some things to notice with this model:
 1. There is no way to leave the recovered compartment (no reinfections).
 2. The interaction between variables in the $\beta S I$ terms make this a *nonlinear* model. 
@@ -81,7 +85,7 @@ Some things to notice with this model:
 
 ### Defining $R_0$
 To analyze this model further, let's investigate what is needed for $\frac{dI}{dt} > 0$ (i.e. for the infection to spread.) We need  $I>0$ (trivial; of course there need to be infections to seed other infections) and $\beta S - \gamma > 0$.
-- Rewriting this second condition as $S > \frac{\gamma}{\beta}$, we can recognize that this defines a *critical proportion* of susceptibles required for the infection to spread. ==
+- Rewriting this second condition as $S > \frac{\gamma}{\beta}$, we can recognize that this defines a *critical proportion* $1/R_0$ of susceptibles required for the infection to spread. 
 	- In a fully susceptible population (novel disease), $S = N =1$ and this critical proportion becomes.
 $$R_0 \equiv \frac{\beta}{\gamma} > 1$$
 		- So $R_0$ has a clear interpretation: if it is greater than 1, the disease will spread. We can also understand it as the average number of secondary infections arising from a single infection in a fully susceptible population (the multiplicative growth rate) or the **basic reproduction number**. 
@@ -129,6 +133,8 @@ ln(I(t)) = ln(I_0) + kt
 $$
 So, if we have data on the number of infections per time, we can fit a linear model to estimate $k$. 
 
+
+![[./figures/lecture1/estimating_k.png]]
 We can also rewrite $k$:
 $$
 \begin{eqnarray}
@@ -139,4 +145,105 @@ R_0 &=& \frac{k}{\gamma} +1 = kD +1
 \end{eqnarray}
 $$
 (remember that $D = \frac{1}{\gamma}$.) So if we have duration data, we can combine that with our linear model to estimate $R_0$ (and then we will know if the disease is spreading, what the critical proportion is, etc.)
-![[./figures/lecture1/estimating_k.png]]
+
+### Equilibrium solutions
+$$
+\frac{dS}{dt} = -\beta S^*I^* 
+\tag{1}
+$$
+$$
+\frac{dI}{dt} = I^*(\beta S^* -\gamma ) \tag{$2$}
+$$
+$$
+\frac{dR}{dt} = \gamma I^* \tag{$3$}
+$$
+
+Solving equation 2 above for $S^*$ gives $$S^* = \frac{\gamma}{\beta} = \frac{1}{R_0}$$. Notice that $S^*$ is the same as the critical proportion. This makes sense -- the threshold we need to vaccinate to prevent invasion is also the immune fraction at equilibrium (vaccination pushes the pandemic to infection earlier). 
+
+Then using this (nonzero value) in equation 1 to solve for $I^*$ gives
+$$
+I^* = 0
+$$
+So at equilibrium the number of infecteds is 0 (i.e. in the SIR model the outbreak always ends.)
+## SIR model with demography
+
+### Motivation
+Is the SIR model a good model for reality? 
+	No, because in most disease people can be reinfected (seasonality with flu, COVID, etc.). We need a way to replenish S with:
+		1. waning immunity
+		2. Pathogen evolution
+		3. births
+		4. 
+The previous SIR model is considered **closed**, because there is no way for new people to enter or exit the population. Now we look to the **SIR model with demography**. 
+
+### Definition
+![[./figures/lecture2/SIR_demography_dag.png]]
+We use $B$ as the birth rate and and $\mu$ as the mortality rate, and to ensure that we have a constant population, we set $B = \mu$. 
+$$
+\begin{eqnarray}
+\frac{dS}{dt} &=& \mu N -\beta SI-\mu S\\
+\frac{dI}{dt} &=& I(\beta S -\gamma -\mu)\\
+\frac{dR}{dt} &=& \gamma I -\mu R
+\end{eqnarray}
+
+$$
+(Notice that if you set up your flow diagram correctly you can just read off the differential equations from it.)
+
+### Defining $R_0$ in the SIR model with demography
+Defining $R_0$ in the early pandemic ($S = N = 1$)
+$$
+\begin{eqnarray}
+\frac{dI}{dt} &>& 0 \\
+\beta S -\gamma -\mu &>& 0\\
+1 &<& \frac{\beta}{\gamma + \mu} \equiv R_0 
+\end{eqnarray}
+$$
+
+
+### Equilibrium solutions
+Solving for equilibrium values for the compartments is pretty similar to the closed model. The results are:
+$$
+\begin{eqnarray}
+	S^* &=& \frac{\gamma + \mu}{\beta} = \frac{1}{R_0}\\
+	I^* &=& \frac{\mu}{\beta}(R_0 -1)\\
+	$R^* &=& 1 - S^* -I^* = 1-\frac{1}{R_0}-\frac{\mu}{\beta}(R_0-1)
+\end{eqnarray}
+$$
+
+
+
+
+
+When we add demography, $I^* \neq 0$ -- there is an **endemic equilibrium**. Therefore the model with demography is a better model for seasonal illnesses that persist over time. We often model childhood diseases (hand foot and mouth, RSV, measles) this way. 
+
+Recall the recovery rate $\gamma$ ($1/\gamma = D$, the duration of infectiousness). $\beta I = \lambda \equiv$ force of infection. If you squint $1/\lambda$ is the duration of susceptibility or the average time in the S class, or the mean age of infection. 
+
+At equilibrium, $\frac{1}{\lambda} = \frac{1}{\beta I^*} = \frac{1}{\mu(R_0-1)}\equiv A$, where $A$ is the average age of infection. Then, defining the life expectancy as $L\equiv \frac{1}{\mu}$, we can rewrite this as 
+
+$$
+A = \frac{L}{R_0-1}
+$$
+Or, 
+$$
+R_0 -1 = \frac{L}{A}
+$$
+As an exercise to think about this relationship:
+
+$$
+\begin{array}{|T|N|S|} \hline \textbf{disease} & \textbf{$R_0$} & \textbf{A} \\ 
+
+\hline \text{measles} & 12 & 6.36 \\ 
+\hline \text{RSV} & 20 & 3.68 \\ 
+\hline \text{smallpox} & 5 & 17.5 \\ 
+\hline \text{rubella} & 6 & 14 \\
+\hline \text{early COVID} & 3 & 35 \\ 
+\hline
+\end{array}
+$$
+This has impact on control. 
+- Measles circulates a lot in school-age children (we think the reason for measles seasonality is contacts in school between school-age children)
+- RSV hits babies and kids in daycare (we actually think most kids get RSV before 2, this derivation is conditional on SIR model being accurate to disease dynamics)
+
+(Notice that for COVID this definition doesn't make a lot of sense, because it hasn't been endemic for 35 years.)
+
+![[./figures/lecture2/R0vsA.png]]

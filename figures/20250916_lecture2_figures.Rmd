@@ -1,0 +1,22 @@
+---
+title: "20250916_lecture2_figures"
+output: html_document
+---
+
+```{r}
+### SIR model with demography dag
+library(ggplot2)
+
+L <- 70
+
+A = seq(2, 50, .01)
+R0_est <- L/A +1 
+df <- data.frame(A, R0_est)
+
+png('./lecture2/R0vsA.png')
+
+ggplot(data = df, aes(x = A, y = R0_est)) + 
+  geom_line(color = 'blue')
+
+dev.off()
+```

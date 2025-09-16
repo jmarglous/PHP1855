@@ -1,0 +1,16 @@
+digraph dag {
+	graph [rankdir=LR]
+	S [label=S]
+	I [label=I]
+	R [label=R]
+	birth_ghost [label="" shape=point style=invis]
+	S_death_ghost [label="" shape=point style=invis]
+	I_death_ghost [label="" shape=point style=invis]
+	R_death_ghost [label="" shape=point style=invis]
+	S -> I [label="βSI" headport=w tailport=e]
+	I -> R [label="γI" headport=w tailport=e]
+	birth_ghost -> S [label=BN headport=w tailport=e]
+	S -> S_death_ghost [label="μS" headport=n tailport=s]
+	I -> I_death_ghost [label="μI" headport=n tailport=s]
+	R -> R_death_ghost [label="μR" headport=n tailport=s]
+}

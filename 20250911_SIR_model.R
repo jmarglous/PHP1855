@@ -1,3 +1,5 @@
+setwd('/Users/jmarglou/Documents/courses/PHP1855/')
+
 beta <- 1/300
 r <- .2
 t_max <- 30 
@@ -34,6 +36,9 @@ print(I)
 print(R)
 
 data.frame(S, I, R, N)
+
+png('./figures/lecture1/SIR_forward_sim.png')
+
 plot(S, type = 'l', lwd = 2, col = 'green')
 lines(I, lwd = 2, col = 'red')
 lines(R, lwd = 2, col = 'blue')
@@ -43,4 +48,6 @@ lines(N, lwd = 2, col = 'black')
 legend("right", legend = c("Susceptible (S)", "Infected (I)", "Recovered (R)", "total (N)"),
        col = c("green", "red",'blue', 'black'), pch = 1)
 
+dev.off()
 max(I)
+
