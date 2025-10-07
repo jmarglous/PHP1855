@@ -1,0 +1,340 @@
+---
+title: "Assignment3"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-09-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd('/Users/jmarglou/Documents/courses/PHP1855/')
+```
+
+### 1 When an individual is infected with a virus it can take some time for the virus to replicate within their system to the extent that they are now infectious. We can model this as an S-E-I-R model or Susceptible-Exposed-Infected-Recovered model. Code up an immunizing SEIR model with demography (births equal to mortality). Call the birth/mortality rate mu, the transmission rate beta, the recovery rate gamma and the rate of flow between E and I as sigma. Consult the diagram on Canvas (Files/Scripts/diagrm) if you need help visualizing the compartments! Call your model function "seirmod". You can assume N = 1. It may help to look back at the coding assignment 2 for setting up the model. 
+
+```{r}
+library(deSolve) 
+library(dplyr)
+
+seirmod = function(t, startconds, parms) { # inputs into the model are "t" 
+  #- time, startconds = starting conditions and parms = parameters
+  S = startconds[1]
+  E = startconds[2]
+  I = startconds[3]
+  R = startconds[4]
+  
+  beta = parms["beta"]
+  gamma = parms["gamma"]
+  mu = parms['mu']
+  sigma = parms['sigma']
+  N = parms["N"]
+  
+  dS = mu*N -mu*S - beta * S * I
+  dE = beta*S*I-mu*E-sigma*E
+  dI = sigma*E - mu*I - gamma * I
+  dR = gamma * I -mu*R
+  
+  res = c(dS, dE, dI, dR)
+  list(res)
+}
+
+```
+
+### 2 Some code for running the model is given below. Run the model for 10 years. Plot the time series for the exposed and infected time series on the same plot with time on x-axis and proportion exposed and infected on the y-axis. What do you notice about the two time series? Why?
+
+
+```{r}
+times = seq(0, 10, by = 1/120) # run from 0 to 10 years, resolved at intervals of 1/120
+parms = c(mu = 1/50, beta = 1000, sigma = 365/8, gamma = 365/5, N = 1) # parameters in years
+startconds = c(S = 0.06, E = 0, I = 0.001, R = 0.939)
+out = as.data.frame(ode(startconds, times, seirmod, parms)) # uncomment this line to run the model
+```
+
+```{r}
+plot(times, out$E,type= "l", lwd = 2, col="dodgerblue",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion")
+#lines(times, out$E, lwd = 2, col = 'forestgreen')
+lines(times, out$I, lwd = 2, col = "firebrick")
+#lines(times, out$R, lwd = 2, col = "purple")
+
+legend("topright",
+       legend = c("E", "I"),
+       col = c("dodgerblue", "firebrick"),
+       lty = c(1, 1),
+       lwd = c(2, 2))
+```
+
+### 3 Update the model to include a seasonal transmission rate given by beta = beta0 * (1 + beta1 * cos(2*pi*t)). You should include beta0 and beta1 as parameters in your parameter list. beta0 = 1000 and beta1 = 0.2. Sigma and gamma and mu are the same as above. Run the model for 100 years. Plot the infected time series, what do you observe? What does this sort of transmission rate represent?
+
+```{r}
+
+seir_seasonal_mod = function(t, startconds, parms) { # inputs into the model are "t" 
+  #- time, startconds = starting conditions and parms = parameters
+  S = startconds[1]
+  E = startconds[2]
+  I = startconds[3]
+  R = startconds[4]
+  
+  beta0 = parms["beta0"]
+  beta1 = parms["beta1"]
+  gamma = parms["gamma"]
+  mu = parms['mu']
+  sigma = parms['sigma']
+  N = parms["N"]
+  
+  beta = beta0 * (1 + beta1 * cos(2*pi*t))
+  
+  dS = mu*N -mu*S - beta * S * I
+  dE = beta*S*I-mu*E-sigma*E
+  dI = sigma*E - mu*I - gamma * I
+  dR = gamma * I -mu*R
+  
+  res = c(dS, dE, dI, dR)
+  list(res)
+}
+
+parms = c(mu = 1/50, beta0 = 1000, beta1 = .2, sigma = 365/8, gamma = 365/5, N = 1) # parameters in years
+times = seq(0, 100, by = 1/120) # run from 0 to 10 years, resolved at intervals of 1/120
+out = as.data.frame(ode(startconds, times, seir_seasonal_mod, parms)) # uncomment this line to run the model
+
+plot(times, out$E,type= "l", lwd = 2, col="dodgerblue",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion")
+#lines(times, out$E, lwd = 2, col = 'forestgreen')
+lines(times, out$I, lwd = 2, col = "firebrick")
+#lines(times, out$R, lwd = 2, col = "purple")
+
+legend("topright",
+       legend = c("E", "I"),
+       col = c("dodgerblue", "firebrick"),
+       lty = c(1, 1),
+       lwd = c(2, 2))
+
+```
+This represents biannual transmission peaks with a mild season followed by an intense season. 
+
+### 4 When we simulate outbreaks of infectious diseases we often see a period of less regular outbreaks before the disease settles down on the endemic cycle. We call this initial period the burn-in period and those initial outbreaks are "transient dynamics". To analyse modeled outbreaks we often remove the burn-in period. To remove the burn-in period here, remove the first 90 years of the simulation. Plot the susceptible and infected time series post-burn-in. 
+
+```{r}
+out_postburnin <- out[out$time >=90, ]
+plot(out_postburnin$time, out_postburnin$S,type= "l", lwd = 2, col="purple",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion")
+#lines(times, out$E, lwd = 2, col = 'forestgreen')
+#lines(out_postburnin$time, out_postburnin$I, lwd = 2, col = "firebrick")
+#lines(times, out$R, lwd = 2, col = "purple")
+
+legend("right",
+       legend = c("S"),
+       col = c("purple"),
+       lty = c(1, 1),
+       lwd = c(2, 2))
+
+```
+```{r}
+out_postburnin <- out[out$time >=90, ]
+plot(out_postburnin$time, out_postburnin$I,type= "l", lwd = 2, col="firebrick",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion")
+#lines(times, out$E, lwd = 2, col = 'forestgreen')
+#lines(out_postburnin$time, out_postburnin$I, lwd = 2, col = "firebrick")
+#lines(times, out$R, lwd = 2, col = "purple")
+
+legend("right",
+       legend = c("I"),
+       col = c("firebrick"),
+       lty = c(1, 1),
+       lwd = c(2, 2))
+
+```
+### 5 Re-run the model with beta1 at 0.1 and 0.25, what do you notice? Again, just plot the post-burn-in outbreaks. 
+### Re-run the model with beta1 = 0.25001. What do you notice? How does this compare to beta1 = 0.25? What are the public health implications of this?
+
+
+```{r}
+parms = c(mu = 1/50, beta0 = 1000, beta1 = .1, sigma = 365/8, gamma = 365/5, N = 1) # parameters in years
+times = seq(0, 100, by = 1/120) # run from 0 to 10 years, resolved at intervals of 1/120
+out = as.data.frame(ode(startconds, times, seir_seasonal_mod, parms)) # uncomment this line to run the model
+out_postburnin <- out[out$time >=90, ]
+
+plot(out_postburnin$time, out_postburnin$S,type= "l", lwd = 2, col="purple",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion")
+#lines(times, out$E, lwd = 2, col = 'forestgreen')
+#lines(out_postburnin$time, out_postburnin$I, lwd = 2, col = "firebrick")
+#lines(times, out$R, lwd = 2, col = "purple")
+
+legend("right",
+       legend = c("S"),
+       col = c("purple"),
+       lty = c(1, 1),
+       lwd = c(2, 2))
+
+plot(out_postburnin$time, out_postburnin$I,type= "l", lwd = 2, col="firebrick",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion")
+#lines(times, out$E, lwd = 2, col = 'forestgreen')
+#lines(out_postburnin$time, out_postburnin$I, lwd = 2, col = "firebrick")
+#lines(times, out$R, lwd = 2, col = "purple")
+
+legend("right",
+       legend = c("I"),
+       col = c("firebrick"),
+       lty = c(1, 1),
+       lwd = c(2, 2))
+
+```
+
+```{r}
+parms = c(mu = 1/50, beta0 = 1000, beta1 = .25, sigma = 365/8, gamma = 365/5, N = 1) # parameters in years
+times = seq(0, 100, by = 1/120) # run from 0 to 10 years, resolved at intervals of 1/120
+out = as.data.frame(ode(startconds, times, seir_seasonal_mod, parms)) # uncomment this line to run the model
+out_postburnin <- out[out$time >=90, ]
+
+plot(out_postburnin$time, out_postburnin$S,type= "l", lwd = 2, col="purple",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion")
+#lines(times, out$E, lwd = 2, col = 'forestgreen')
+#lines(out_postburnin$time, out_postburnin$I, lwd = 2, col = "firebrick")
+#lines(times, out$R, lwd = 2, col = "purple")
+
+legend("right",
+       legend = c("S"),
+       col = c("purple"),
+       lty = c(1, 1),
+       lwd = c(2, 2))
+
+plot(out_postburnin$time, out_postburnin$I,type= "l", lwd = 2, col="firebrick",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion")
+#lines(times, out$E, lwd = 2, col = 'forestgreen')
+#lines(out_postburnin$time, out_postburnin$I, lwd = 2, col = "firebrick")
+#lines(times, out$R, lwd = 2, col = "purple")
+
+legend("right",
+       legend = c("I"),
+       col = c("firebrick"),
+       lty = c(1, 1),
+       lwd = c(2, 2))
+
+```
+
+```{r}
+parms = c(mu = 1/50, beta0 = 1000, beta1 = .25001, sigma = 365/8, gamma = 365/5, N = 1) # parameters in years
+times = seq(0, 100, by = 1/120) # run from 0 to 10 years, resolved at intervals of 1/120
+out = as.data.frame(ode(startconds, times, seir_seasonal_mod, parms)) # uncomment this line to run the model
+out_postburnin <- out[out$time >=90, ]
+
+plot(out_postburnin$time, out_postburnin$S,type= "l", lwd = 2, col="purple",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion")
+#lines(times, out$E, lwd = 2, col = 'forestgreen')
+#lines(out_postburnin$time, out_postburnin$I, lwd = 2, col = "firebrick")
+#lines(times, out$R, lwd = 2, col = "purple")
+
+legend("right",
+       legend = c("S"),
+       col = c("purple"),
+       lty = c(1, 1),
+       lwd = c(2, 2))
+
+plot(out_postburnin$time, out_postburnin$I,type= "l", lwd = 2, col="firebrick",xlab = "", ylab = "")
+title(xlab = "Time")
+title(ylab = "Proportion")
+#lines(times, out$E, lwd = 2, col = 'forestgreen')
+#lines(out_postburnin$time, out_postburnin$I, lwd = 2, col = "firebrick")
+#lines(times, out$R, lwd = 2, col = "purple")
+
+legend("right",
+       legend = c("I"),
+       col = c("firebrick"),
+       lty = c(1, 1),
+       lwd = c(2, 2))
+
+```
+beta1 = .25001 is quite different than beta1 = .25, with a major invasion every 5 years rather than somewhat stochastic behavior. This suggests that the dynamics are chaotic (large, irregular changes in behavior for small changes in parameters). This makes public health invasions very challenging and would likely require investment in detection to observe outbreaks as they emerge. 
+
+### 6 For your post burn-in dataset when beta1 is 0.2. What is max number of infected individuals per year? Find a way to calculate this in R. Note that year 100 only has 1 observation, so remove this from your calculation. Round your peak sizes to 6 decimal places (you may find the "round" command helpful). Print the results. How many unique peaks are there? 
+
+Flux into the infected class per time step is sigma*E*dt. Summing these values over a year gives the number of n
+```{r}
+parms = c(mu = 1/50, beta0 = 1000, beta1 = .2, sigma = 365/8, gamma = 365/5, N = 1) # parameters in years
+times = seq(0, 100, by = 1/120) # run from 0 to 10 years, resolved at intervals of 1/120
+out = as.data.frame(ode(startconds, times, seir_seasonal_mod, parms)) # uncomment this line to run the model
+out <- out %>%
+  mutate(year = floor(out$time))
+
+out_postburnin <- out %>%
+  filter(year >= 90 & year < 100)
+
+
+out_postburnin_summary <- out_postburnin %>%
+  group_by(year) %>%
+  summarize(yearly_I = max(I)) %>%
+  mutate(yearly_I = round(yearly_I, 6))
+
+out_postburnin_summary
+```
+```{r}
+plot(out_postburnin_summary$year, out_postburnin_summary$yearly_I, type= "l", lwd = 2, col="firebrick",xlab = "", ylab = "")
+title(xlab = "Year")
+title(ylab = "Maximum size of infected class")
+```
+
+There are two unique values for the peak size of the infected class per year. 
+
+### 7 Using your code from 1c, 1d and 1f, make a bifurcation diagram showing beta1 (x-axis) against peak size (y-axis). On the y-axis you only need to show a point for each unique peak size e.g. 2 peaks for biennial outbreaks. Again, you're only analysing peaks in the last 10 years of the model run. You should run the model for values of beta1 between 0 and 0.25 in intervals of 0.0025 i.e. beta1vec = seq(0, 0.25, length = 101)
+
+
+```{r}
+beta1vec <- seq(0, .25, length = 101)
+
+all_results_df <- data.frame(
+  beta1 = numeric(),
+  peak_size = numeric()
+)
+
+for (beta1_draw in beta1vec) {
+  parms = c(mu = 1/50, beta0 = 1000, beta1 = beta1_draw, sigma = 365/8, gamma = 365/5, N = 1) # parameters in years
+  times = seq(0, 100, by = 1/120) # run from 0 to 10 years, resolved at intervals of 1/120
+  out = as.data.frame(ode(startconds, times, seir_seasonal_mod, parms)) # uncomment this line to run the model
+  out <- out %>%
+    mutate(year = floor(out$time))
+  
+  out_postburnin <- out %>%
+    filter(year >= 90 & year < 100)
+  
+  
+  out_postburnin_summary <- out_postburnin %>%
+    group_by(year) %>%
+    summarize(yearly_I = max(I)) %>%
+    mutate(yearly_I = round(yearly_I, 6))
+  
+  peaks <- unique(out_postburnin_summary$yearly_I)
+  
+  peaks_df <- data.frame(
+    beta1 = beta1_draw, 
+    peak_size = peaks
+  )
+  all_results_df <- bind_rows(all_results_df, peaks_df)
+}
+
+```
+
+```{r}
+plot(all_results_df$beta1, all_results_df$peak_size, type= "p", pch = 20, cex = .5, col="firebrick", xlab = "beta1", ylab = "number of peaks")
+
+```
+### 8 Consider the model you have code up for this assignment. Would this be a good model for RSV? Why, why not? What would beta1 represent for RSV? You can use information presented in the lectures and also cite research articles. As a guideline, answers should be around 300 words. You can submit this as separate word document or in the markdown file but this should be linked to question 1h in gradescope.
+
+beta1 represents the amplitude of the seasonal forcing in the model. A higher beta1 corresponds with a grater difference in effective contact during seasonal peaks relative to troughs. As seen in the above plot, as beta1 increases, there are different regimes that emerge in terms of number of peaks -- when beta1 < .16, there is a single annual peak, when .15 < beta1< .21, there are two peaks, with a less intense year followed by a more intense one, and when beta1 > .21, there is chaotic behavior with difficult-to-predict patterns of infectious peaks. 
+
+RSV is a common childhood illness with droplet transmission and first infection typically occurring in the first couple of years of life. There is a strong seasonal component to its spread with increasing transmission during winter months. RSV has an estimated R0 of 3 (Reis and Shaman PLoS Comput Biol 2016). The model proposed here is a SEIR model with demography and seasonal forcing on the beta parameter. The observed patterns for RSV of strong seasonal trends in transmission and infections early in life motivate this use of seasonal forcing for beta and the use of demography to introduce new individuals to the susceptible class. Additionally, observations of a latent period prior to symptomatic infections and asu,ptomatic transmission motivate the incorporation of an exposed class in the model (SEIR instead of SIR) (Munywoki et al JID 2015). 
+
+However, there is evidence that while initial infections occur early in life, RSV reinfections can occur throughout the lifespan and are particularly virulent in the elderly (Cong et al BMC Medicine 2023). Therefore, while the model here captures much of the observed characteristics of RSV, a model with waning immunity over the lifespan may be even more accurate. 
+
+
+
+

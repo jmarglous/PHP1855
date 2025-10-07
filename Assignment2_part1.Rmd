@@ -1,0 +1,203 @@
+---
+title: "Assignment2"
+output: pdf_document
+date: "2024-09-19"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Basic SIR model
+
+### this function sets up the basic "closed" SIR model
+
+```{r}
+
+library("deSolve")
+sirmod = function(t, startconds, parms) { # inputs into the model are "t" - time, startconds = starting conditions and parms = parameters
+  S = startconds[1]
+  I = startconds[2]
+  R = startconds[3]
+  beta = parms["beta"]
+  mu = parms["mu"]
+  gamma = parms["gamma"]
+  
+  dS = -beta * S * I 
+  dI = beta * S * I - gamma * I
+  dR = gamma * I
+  
+  res = c(dS, dI, dR)
+  list(res)
+}
+
+## inputs into the model
+times = seq(0, 26, by = 1) # weeks
+parms = c(mu = 0, beta = 2, gamma = 1/2)
+startconds = c(S = 0.999, I = 0.001, R = 0)
+
+# run the model
+out = ode(y = startconds, times = times, func = sirmod, parms = parms)
+out = as.data.frame(out)
+
+plot(times, out$S,type= "l", lwd = 2, col="dodgerblue")
+lines(times, out$I, lwd = 2, col = "firebrick")
+lines(times, out$R, lwd = 2, col = "purple")
+```
+
+### 1a) Edit the SIR model to make it an "open" epidemic i.e. include a birth rate and death rate into the model. Assume N =1
+
+### HINT: births occur into the susceptible compartment (i.e. children are not born infected or recovered!). Deaths can occur in any compartment but the birth rate must equal the death rate. To start with set mu = 0. Run the model- you should generate the same plot as the closed epidemic model.
+
+```{r}
+sirmod = function(t, startconds, parms) { # inputs into the model are "t" - time, startconds = starting conditions and parms = parameters
+  S = startconds[1]
+  I = startconds[2]
+  R = startconds[3]
+  beta = parms["beta"]
+  mu = parms["mu"]
+  gamma = parms["gamma"]
+  
+  dS = mu - beta * S * I - mu *S
+  dI = beta * S * I - gamma * I - mu * I
+  dR = gamma * I - mu * R
+  
+  res = c(dS, dI, dR)
+  list(res)
+}
+
+## inputs into the model
+times = seq(0, 26, by = 1) # weeks
+parms = c(mu = 0, beta = 2, gamma = 1/2)
+startconds = c(S = 0.999, I = 0.001, R = 0)
+
+# run the model
+out = ode(y = startconds, times = times, func = sirmod, parms = parms)
+out = as.data.frame(out)
+
+plot(times, out$S,type= "l", lwd = 2, col="dodgerblue")
+lines(times, out$I, lwd = 2, col = "firebrick")
+lines(times, out$R, lwd = 2, col = "purple")
+
+```
+### 1b) set the birth rate to 1/(50\*52) (what is life expectancy in this model?). Run the model now for 1 years (hint, remember our time variables is in weeks), What is happening to the S curve after the outbreak? 
+
+```{r}
+## inputs into the model
+times = seq(0, 52, by = 1) # weeks
+parms = c(mu = 1/(50*52), beta = 2, gamma = 1/2)
+startconds = c(S = 0.999, I = 0.001, R = 0)
+
+# run the model
+out = ode(y = startconds, times = times, func = sirmod, parms = parms)
+out = as.data.frame(out)
+
+plot(times, out$S,type= "l", lwd = 2, col="dodgerblue")
+lines(times, out$I, lwd = 2, col = "firebrick")
+lines(times, out$R, lwd = 2, col = "purple")
+```
+After the outbreak the S curve continues to grow as new births enter the population. Eventually there is a small second outbreak among these new susceptibles towards the end of the year. 
+
+### 1c) Now run the model for 100 years, generate a plot of the S I R groups as before. Hint: the current time unit is weeks.
+### What do you observe?
+
+
+```{r}
+## inputs into the model
+times = seq(0, 52*100, by = 1) # weeks
+parms = c(mu = 1/(50*52), beta = 2, gamma = 1/2)
+startconds = c(S = 0.999, I = 0.001, R = 0)
+
+# run the model
+out = ode(y = startconds, times = times, func = sirmod, parms = parms)
+out = as.data.frame(out)
+
+plot(times, out$S,type= "l", lwd = 2, col="dodgerblue")
+lines(times, out$I, lwd = 2, col = "firebrick")
+lines(times, out$R, lwd = 2, col = "purple")
+```
+After some initial fluctuations the model settles into equilibrium values with most of the population resistant, and less of the population susceptible. The proportion infected at any given time remains close to 0. 
+
+### 1d) Plot the SI phase plane - this is just the a plot of the susceptible time series against the infected time series. 
+### to make this plot easier to visualize, just plot the last half of the simulation (i.e. last 50 years) where time > 2600
+
+```{r}
+out_last_half <- out %>%
+  filter(time > 2600)
+
+plot(out_last_half$S, out_last_half$I, type = 'l', lwd = 2, col = 'forestgreen')
+#plot(out$S, out$I, type = 'l', lwd = 2, col = 'forestgreen')
+
+```
+
+### 1e) plot the point representing the equilibrium solution of the open SIR model on the plot above. i.e. plot S*, I* as a point
+
+```{r}
+S_star <- (parms['gamma'] + parms['mu'])/parms['beta']
+I_star <- parms['mu']/parms['beta']*(1/S_star -1)
+
+plot(out_last_half$S, out_last_half$I, type = 'l', lwd = 2, col = 'forestgreen')
+points(S_star, I_star, pch = 19, col = 'red', cex = 2)
+
+```
+
+### 1f) Re-run the model for 500 years and remake the plot above. This time plot the data from 50 years to to 500 years or time > 2600. What do you see?
+
+```{r}
+times = seq(0, 52*500, by = 1) # weeks
+parms = c(mu = 1/(50*52), beta = 2, gamma = 1/2)
+startconds = c(S = 0.999, I = 0.001, R = 0)
+
+# run the model
+out = ode(y = startconds, times = times, func = sirmod, parms = parms)
+out = as.data.frame(out)
+
+plot(times, out$S,type= "l", lwd = 2, col="dodgerblue")
+lines(times, out$I, lwd = 2, col = "firebrick")
+lines(times, out$R, lwd = 2, col = "purple")
+```
+```{r}
+total_rows <- nrow(out)
+out_last_half <- out %>%
+  tail(total_rows/2)
+
+
+plot(out_last_half$S, out_last_half$I, type = 'l', lwd = 2, col = 'forestgreen')
+points(S_star, I_star, pch = 19, col = 'red', cex = 1)
+
+```
+### The equilibrium point represents the point at with dI/dt = dS/dt = 0. However, it is possible for dI/dt = 0 while dS/dt is not zero and vice versa. Setting dI/dt = 0 and solving for S gives us the equation of the "I nullcline" and settling dS/dt = 0 and solving for I gives the equation for the "S nullcline". 
+
+### 1g) Derive the equation for the I nullcline for the open SIR model. Hint: the final result should be familiar, use the equation for dI/dt (you don't need the other two equations from the S I R model). To include this in your markdown document from can just write an expression in terms of existing parameters. 
+
+```{r}
+out_last_half$I_nullcline <- (parms['gamma'] + parms['mu'])/parms['beta']
+
+```
+
+### 1h) Derive the equation for the S nullcline. Hint: this is a bit more complex, use dS/dt = 0 and solve for I. The final result will also depend on S. To include this in your markdown document from can just write an expression in terms of existing parameters and I. 
+
+```{r}
+out_last_half$S_nullcline <- parms['mu']/parms['beta'] * (1-out_last_half$S)/out_last_half$S
+
+```
+
+### BONUS POINTS 1i) Update your plot above to include the Snullcline and Inullcline. These lines divide the plot into four quadrants where S and I are either increasing or decreasing. 
+
+```{r}
+
+plot(out_last_half$S, out_last_half$I, type = 'l', lwd = 2, col = 'forestgreen')
+points(S_star, I_star, pch = 19, col = 'red', cex = 1)
+abline(v = I_nullcline, lwd = 2, lty = 2, col = 'black')
+lines(out_last_half$S, out_last_half$S_nullcline, type = 'l', lty = 2, lwd = 2, col = 'black')
+
+```
+
+
+
+
+
+
+
+
+
+

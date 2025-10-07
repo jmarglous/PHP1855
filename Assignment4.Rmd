@@ -1,0 +1,197 @@
+---
+title: "Assignment 4 NOT FOR GRADE"
+output: html_document
+date: "2024-10-01"
+---
+
+```{r}
+library(dplyr)
+setwd("~/Documents/courses/PHP1855/") # set my working directory
+po <- read.csv("polio.csv") #polio data downloaded from Project Tycho
+```
+
+### 1) Plot the time series of total polio cases in the US.
+```{r}
+po_yearly <- po %>%
+  group_by(year, week) %>%
+  summarize(total_cases = sum(cases, na.rm = TRUE))
+
+plot(po_yearly$year, po_yearly$total_cases, 
+     type = 'l', 
+     col = 	'#e11383',
+     lwd = 2,
+     xlab = 'year',
+     ylab = 'total cases')
+```
+
+### 2) The code below runs produces a wavelet plot. Run this on the US time series (you'll just need to update the first line). 
+### What does the wavelet plot show? 
+
+
+```{r}
+require("WaveletComp")
+mydata = data.frame(x=po_yearly$total_cases)
+myw = analyze.wavelet(mydata, "x",  dt=1/52.333,
+                        lowerPeriod = 0.7, upperPeriod = 8, n.sim = 30)
+  wt.image(myw, n.levels=250,
+           legend.params = 
+             list(lab="wavelet power levels", mar=4.7,label.digits=3), plot.ridge = FALSE, col.contour = "black",
+           graphics.reset=F, siglvl = 0.05)
+ 
+```
+
+### 3) Calculate the mean peak timing of cases by state and plot this against latitude. Hint: first calculate average weekly cases for each state and then calculate when the week when the peak occurs. Plot peak timing against latitude and fit a linear regression model to the scatter plot (plot the linear regression line... bonus points for plotting confidence interval.) What is the R^2?
+
+```{r}
+df_max <- po %>%
+  group_by(state, week) %>%
+  summarize(avg_cases = mean(cases, na.rm = TRUE)) %>% 
+  ungroup()
+```
+
+```{r}
+df_max <- po %>%
+  group_by(state, week) %>%
+  summarise(
+    avg_cases == mean(cases, na.rm = TRUE)) $>$ 
+  ungroup()
+
+df_max <- df_max %>%
+  mutate(time_numeric = year + week/52) %>%
+  select(state, time_numeric, cases, lon, lat)
+
+model <- lm(time_numeric ~ lat, data = df_max)
+
+new_lats <- seq(min(df_max$lat, na.rm = TRUE), max(df_max$lat, na.rm = TRUE), by = .02)
+
+ci <- predict(model, 
+              newdata = data.frame(lat = new_lats), 
+              interval = 'confidence', 
+              level = .95)
+
+plot(df_max$lat, df_max$time_numeric, 
+      pch = 21, 
+      col = '#e11383',
+      bg = '#e11383',
+      xlab = 'Latitude',
+      ylab = 'Time of peak cases'
+     )
+
+abline(model, col = '#F5821F', lwd = 2)
+#lines(new_lats, ci[,2], col = '#F5821F', lwd = 2)
+#lines(new_lats, ci[,3], col = '#F5821F', lwd = 2)
+
+polygon(c(new_lats, rev(new_lats)), c(ci[,2], rev(ci[,3])), col = '#F5821F80', border = NA) 
+
+```
+```{r}
+summary(model)$r.squared
+```
+
+### 4) Center of gravity is a better metric of the mean timing of cases. Using the code snippet below, calculate the center of gravity for each state and plot center of gravity against latitude. Run a regression of latitude against center of gravity. What is the R^2? How does that compare to the value above? Why?
+```{r}
+# code snipped for center of gravity
+# update "sub_state", "week" and "cases.mean" to match your data which should be the form of a dataset (sub_state) with columns of week of year ("week") and cases ("cases.mean"). There should be just 53 weeks of data (i.e. average by week). 
+  cog <- as.numeric(sub_state %>% summarize(
+   cog=weighted.mean.circular(circular(week/52*360, type="angles", units="degrees"), cases.mean)
+ )  %>%
+   mutate(
+     cog=ifelse(cog < 0, cog + 360, cog)/360*52))
+```
+
+```{r}
+
+```
+
+### 5) Make an image.plot of weekly average time series for each location, ordered by latitude and normalized by dividing by the maximum for each state. Hint: the image.plot function in the "fields" package is how I make these, but there are other options...
+
+```{r}
+
+
+```
+
+### 5) Calculate the epidemic intensity for each location using the code snippet below/ Plot intensity against latitude.
+```{r}
+ps <- cases/sum(cases) $# where cases are weekly average cases for a location for weeks 1 to 52 (drop week 53)
+ps <- ps[ps != 0]
+Intensity <- 1- (sum(ps*log(ps)))/(log(1/52))
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+### 6) plot intensity on a map
+
+```{r}
+require("maptools")
+# load use shapefile
+### download the state boundary file from census.gov: 
+### cb_2016_us_state_5m.zip [1.0 MB]
+### at https://www.census.gov/geographies/mapping-files/2016/geo/carto-boundary-file.html
+setwd("~/Dropbox/Climate_All/Polygons/cb_2016_us_state_5m") #update for your file path
+usamap <- readShapePoly("cb_2016_us_state_5m.shp")
+usamap <- usamap[order(usamap$NAME),]
+usamap <- merge(usamap, dfout, by.x = c("NAME"), by.y = c("name") ) #for the function by.y = c("name"), "name" should be replaced by whatever you called the variable for state name in your dataset
+
+## clean shapefile for plotting
+usamap <- usamap[!usamap$STATEFP %in% c("15","02","52","72","69","66","60","78"),]
+
+spplot(usamap, "intensity",  sub = " ", 
+       col = "transparent", col.regions=rev(brewer.blues(36)),
+       par.settings = list(axis.line = list(col =  'transparent'))) #you'll need to update this with your intensity variable
+
+
+```
+
+
+
+### EXTRA CODE
+
+### Coding synchrony plots
+
+```{r}
+require("ncf")
+# the function for ncf requires x: a vector of length n representing the x coordinates (or longitude; see latlon)
+# y: a vector of length n representing the y coordinates (or latitude).
+#z	matrix of dimension n x p representing p observation at each location.
+
+# construct x, y, z for the polio dataset. My polio dataset is called "po"
+
+#x, y
+latlons <- unique(data.frame(state = po$state, lat = po$lat, lon = po$lat))
+x= latlons$lon
+y = latlons$lat
+
+#z you can do this with a for loop, but "reshape" is quicker
+po_clean <- po[c("state","cases","date")]
+po_clean <- po_clean[order(po_clean$state, po_clean$date),]
+wide_data <- reshape(po_clean, idvar = "state", timevar = "date", v.names = "cases", direction = "wide")
+z = wide_data[,2:ncol(wide_data)]
+synchrony <- Sncf(x = x, y = y, z =z, na.rm = TRUE,latlon = T, circ = F, resamp = 500,df=5)
+
+# plot output
+plot(synchrony$real$predicted$x, synchrony$real$predicted$y, type = "l", col = "red", lwd = 3,
+     cex.main = 1, cex.axis = 1, bty = "n", cex.lab = 1, xlim = c(0,2000),xlab="Distance Km",ylab="Correlation", ylim = c(0.2,0.8))
+polygon(c(rev(synchrony$real$predicted$x), synchrony$real$predicted$x), 
+        c(rev(synchrony$boot$boot.summary$predicted$y[2,]), synchrony$boot$boot.summary$predicted$y[10,]), col=rgb(1, 0, 0,0.2), border = NA)
+
+```
+
+
+### Exporting plots
+
+```{r}
+pdf("state_intensity.pdf") # for other plots you may need to specify width/height e.g. width = 5, height = 3
+spplot(usamap, "intensity",  sub = " ", 
+       col = "transparent", col.regions=rev(brewer.blues(36)),
+       par.settings = list(axis.line = list(col =  'transparent')))
+dev.off()
+```
+
+

@@ -157,7 +157,7 @@ sing <- sing %>%
   mutate(incidence = sing$cases - lag(sing$cases)) 
 
 ggplot(sing, aes(x = time, y= incidence)) + 
-  geom_point(color = 'blue')
+  geom_line(color = 'blue')
 ```
 ## 2c)  Look at data from days 70 to 90 when epidemic appears to be growing exponentially. Plot logged daily incidence data between days 70:90 - what do you see? interpret the plot .
 ```{r}
@@ -180,7 +180,7 @@ day90 <- sing %>% slice(90) %>% pull(time)
 
 sing_filt <- sing_filt %>%
   filter(time >= as.Date(day70) & time <= as.Date(day90))
-
+ 
 
 ggplot(sing_filt, aes(x = time, y = log_inc)) + 
   geom_line(color = 'blue')
@@ -192,8 +192,9 @@ model_fit
 The slope of the line is .1604.
 
 ```{r}
-sing_filt <- sing_filt %>%
-  mutate(predicted = predict(model_fit, newdata = sing_pred))
+time_vec <- sing_filt$time
+sing_filt$predicted <- predict(model_fit, newdata = sing_filt)
+
 
 ggplot(sing_filt, aes(x = time)) + 
   geom_point(aes(y = log_inc), color = 'blue') +
@@ -212,10 +213,4 @@ D <- 10
 R0_sing <- k*D +1 
 R0_sing
 ```
-The estimated R0 is 2.605.
-
-
-
-
-
-
+The estimated R0 is 2.604.

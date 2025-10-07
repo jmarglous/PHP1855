@@ -96,7 +96,7 @@ $$
 $$
 , so $D$ is the duration of infectiousness. Substituting, $R_0 = \beta D$, matching the definition of $R_0$ for the discrete time model (with $N =1$). 
 
-### Defining $R_{e}$
+### Defining $R_e$
 In a endemic/non-pandemic context where less than the whole population is susceptible, the **effective reproduction number** rather than the basic reproduction number is the threshold for invasion:
 $$
 \begin{eqnarray}
@@ -211,10 +211,7 @@ $$
 $$
 
 
-
-
-
-When we add demography, $I^* \neq 0$ -- there is an **endemic equilibrium**. Therefore the model with demography is a better model for seasonal illnesses that persist over time. We often model childhood diseases (hand foot and mouth, RSV, measles) this way. 
+When we add demography, $I^* \neq 0$ -- there is an **endemic equilibrium**. Therefore the model with demography is a better model for seasonal illnesses that persist over time. We often model childhood diseases (hand foot and mouth, RSV, measles) this way.  However, note that this still doesn't fully capture reality -- the nonzero equilibrium is still static without seasonal outbreaks. 
 
 Recall the recovery rate $\gamma$ ($1/\gamma = D$, the duration of infectiousness). $\beta I = \lambda \equiv$ force of infection. If you squint $1/\lambda$ is the duration of susceptibility or the average time in the S class, or the mean age of infection. 
 
@@ -247,3 +244,121 @@ This has impact on control.
 (Notice that for COVID this definition doesn't make a lot of sense, because it hasn't been endemic for 35 years.)
 
 ![[./figures/lecture2/R0vsA.png]]
+
+### Seasonal forcing
+- Open SIR model is a damped oscillator with oscillations of decreasing frequency toward equilibrium.
+	- Undamped oscillatory models also exist in ecology (Lotka-Volterra predator prey model is the classic). 
+		The math of the model is provided in the slides. 
+			There is a nice example of linked hare and lynx populations that demonstrates the model matches the real world well. 
+- However infectious disease outbreaks don't seem to match a **damped** oscillation -- we see continued seasonal spikes of similar intensity.
+	Resembles a forced (undamped) harmonic oscillator more closely). 
+		We *force* the $\beta$ (effective contact) term
+			Justifications include climate and behavioral drivers:
+			  - Increased indoor contacts in winter
+			  - Seasonal behavior (children going to school, etc.)
+			  - better microbe survival in certain environments
+		  - Climate's effect of transmission depend on pathogen -- (climate impacts mosquito lifecycle for vectorborne diseases, etc. )
+		  - We use a sinusoidal term to create a $\beta(t)$ to produce seasonal peaks
+			  - We can call this a "climate" model but it's really just a fixed time effect -- Prof. Baker says her work is trying to incorporate actual environmental variables into this seasonal term to understand more interesting effects of climate chnge, etc. $$\beta(t) = \beta_0(1+\beta_1(\omega t))$$
+					  - Get different effects as you change amplitude of time forcing (biannual outbreaks, etc.)
+						  - Eventually you can get chaotic (deterministically unpredictable) effects year over year
+							  - Small changes in input can (but don't always) produce large changes in output
+Different types of outbreak (annual, biannual, chaotic) require different responses.
+	Typically serology for immunity is the best way to assess the susceptible population. 
+
+## SIR model with waning immunity
+(We explored this in the homework)
+### Definition
+$$
+\begin{eqnarray}
+\frac{dS}{dt} &=& -\beta SI + \omega R\\
+\frac{dI}{dt} &=& I(\beta S -\gamma )\\
+\frac{dR}{dt} &=& \gamma I -\omega R
+\end{eqnarray}
+$$![[SIRS_dag.jpg]]
+### R0 calculation
+$$
+R_0 \equiv \frac{\beta}{\gamma}
+$$
+### Equilibrium 
+Equilibrium values:
+$$
+S^* = \frac{\gamma}{\beta} = \frac{1}{R_0}
+$$
+$$
+	I^* = \frac{\omega}{\omega + \gamma}(1-\frac{1}{R_0})
+$$
+Same thing as we showed for model with demography -- at equilibrium there is some non-zero onward transmission. 
+
+## Vaccination at birth
+Assume a fraction of newborns $\rho$ are vaccinated at birth and pass immediately into the Recovered category.
+$$
+\begin{eqnarray}
+\frac{dS}{dt} &=& (1-\rho)\mu -\beta SI - \mu S\\
+\frac{dI}{dt} &=& I(\beta S -\gamma -\mu)\\
+\frac{dR}{dt} &=& \gamma I -\mu R + \rho\mu
+\end{eqnarray}
+$$![[SIR_vaccination_dag.png]]
+	As before, $R_0 = \frac{\beta}{\gamma + \mu}$ and $S^* = \frac{\gamma+\mu}{\beta} = \frac{1}{R_0}$.
+### What is the proportion to vaccinate to eradicate infection?
+At equilibrium, from the $dS/dt$ equation,
+$$
+0 = \mu -\beta S^* I^*-\mu S^*-\rho \mu
+$$Which eventually gives
+$$
+	I^* = \frac{\mu}{\beta}(R_0 -1-\rho R_0)
+$$
+So the equilibrium value $I^*$ of infecteds depends on the proportion of newborns that are vaccinated at birth. Finding an equilibrium where $I^* = 0$,
+$$
+\rho = 1-\frac{1}{R_0}
+$$, the familiar critical proportion. 
+
+The time in the susceptible class is approximated as before by $\frac{1}{\gamma} = \frac{1}{\beta I^*}$. Without vaccination, this is $A = \frac{1}{\mu(R_0-1)}$. Now, with vaccination, $A = \frac{1}{\mu (R_0 -1)}$. So the vaccination rate increases the time in the infected class. We can see this with some real values.  
+
+$$
+\begin{array}{|T|N|S|A|B|} \hline \textbf{disease} & \textbf{$R_0$} & A (unvax'd) & A (\rho = .8) & A(\rho = .6)\\ 
+
+\hline \text{measles} & 12 & 6.36 & 50 & 11.29\\ 
+\hline \text{RSV} & 20 & 3.68 & 23.3 & 6.36\\ 
+\hline \text{smallpox} & 5 & 17.5 & Inf & 35 \\ 
+\hline \text{rubella} & 6 & 14 & 350 & 26.9\\
+\hline \text{early COVID} & 3 & 35 \\ 
+\hline
+\end{array}
+$$
+- Rubella in particular raises an important public health issue -- because rubella causes birth defects when a pregnant parent is infected in the first trimester of pregnancy, vaccination campaigns can push the mean age of infection toward a dangerous subpopulation. This motivates careful management of vaccination drives. 
+
+## Vaccination at birth with waning immunity
+
+$$
+\begin{eqnarray}
+\frac{dS}{dt} &=& (1-\rho)\mu -\beta SI - \mu S + \sigma R\\
+\frac{dI}{dt} &=& I(\beta S -\gamma -\mu)\\
+\frac{dR}{dt} &=& \gamma I -\mu R + \rho\mu -\sigma R
+\end{eqnarray}
+$$
+![[SIR_vaccination_waning_dag.png]]
+Solving for $I^*$ and then finding when it is 0, 
+$$
+I^* = \frac{\mu(1-\rho-\frac{1}{R_0})+\sigma(1-\frac{1}{R_0})}{\frac{\beta}{R_0}+\sigma}
+$$
+$$
+P_c = (\frac{\sigma}{\mu} + 1)(1-\frac{1}{R_0})
+$$
+The addition of this first factor $(\frac{\sigma}{\mu} + 1)$ increases the critical proportion, potentially above 1 depending on some parameterizations -- it can become impossible to eradicate a disease through vaccination alone. 
+
+We make a big assumption here that immunity from vaccination is the same as natural immunity. What if vaccination immunity lasts forever but natural immunity wanes over time? Now we need to introduce a separate compartment for vaccinated people. 
+
+![[SIR_vaccination_natural_immunity_dag.png]]
+
+$$
+\begin{eqnarray}
+N &=& S+I+R+V\\
+\frac{dS}{dt} &=& (1-\rho)\mu -\beta SI - \mu S + \sigma R\\
+\frac{dI}{dt} &=& I(\beta S -\gamma -\mu)\\
+\frac{dR}{dt} &=& \gamma I -\mu R -\sigma R \\
+\frac{dV}{dt} &=& \rho\mu-\mu V
+\end{eqnarray}
+$$
+We find that $R_0 = \frac{\beta}{\gamma +\mu}$, and doing the same steps as above for other variations of the SIR model, that the critical proportion of vaccination required to eliminate the disease is $1-\frac{1}{R_0}$. That is, that as long as vaccination is fully/permanently immunizing, it solves the problem of waning immunity. 
+- Consider further that this is *pediatric* vaccination -- what would a model of mass vaccination suggest?
