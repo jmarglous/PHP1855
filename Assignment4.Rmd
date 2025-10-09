@@ -45,31 +45,27 @@ myw = analyze.wavelet(mydata, "x",  dt=1/52.333,
 ```{r}
 df_max <- po %>%
   group_by(state, week) %>%
-  summarize(avg_cases = mean(cases, na.rm = TRUE)) %>% 
-  ungroup()
-```
-
-```{r}
-df_max <- po %>%
-  group_by(state, week) %>%
   summarise(
-    avg_cases == mean(cases, na.rm = TRUE)) $>$ 
+    avg_cases = mean(cases, na.rm = TRUE),
+    lat = first(lat),
+    lon = first(lon),
+    .groups = 'drop' # This removes the grouping structure after summarizing
+  )
+
+df_peak_cases <- df_max %>%
+  group_by(state) %>%
+  slice_max(order_by = avg_cases, n = 1) %>%
   ungroup()
 
-df_max <- df_max %>%
-  mutate(time_numeric = year + week/52) %>%
-  select(state, time_numeric, cases, lon, lat)
 
-model <- lm(time_numeric ~ lat, data = df_max)
-
-new_lats <- seq(min(df_max$lat, na.rm = TRUE), max(df_max$lat, na.rm = TRUE), by = .02)
-
+model <- lm(week ~ lat, data = df_peak_cases)
+new_lats <- seq(min(df_peak_cases$lat, na.rm = TRUE), max(df_peak_cases$lat, na.rm = TRUE), by = .02)
 ci <- predict(model, 
               newdata = data.frame(lat = new_lats), 
               interval = 'confidence', 
               level = .95)
 
-plot(df_max$lat, df_max$time_numeric, 
+plot(df_peak_cases$lat, df_peak_cases$week, 
       pch = 21, 
       col = '#e11383',
       bg = '#e11383',
@@ -84,32 +80,182 @@ abline(model, col = '#F5821F', lwd = 2)
 polygon(c(new_lats, rev(new_lats)), c(ci[,2], rev(ci[,3])), col = '#F5821F80', border = NA) 
 
 ```
+
 ```{r}
 summary(model)$r.squared
 ```
 
 ### 4) Center of gravity is a better metric of the mean timing of cases. Using the code snippet below, calculate the center of gravity for each state and plot center of gravity against latitude. Run a regression of latitude against center of gravity. What is the R^2? How does that compare to the value above? Why?
 ```{r}
+library(circular)
 # code snipped for center of gravity
 # update "sub_state", "week" and "cases.mean" to match your data which should be the form of a dataset (sub_state) with columns of week of year ("week") and cases ("cases.mean"). There should be just 53 weeks of data (i.e. average by week). 
-  cog <- as.numeric(sub_state %>% summarize(
-   cog=weighted.mean.circular(circular(week/52*360, type="angles", units="degrees"), cases.mean)
- )  %>%
-   mutate(
-     cog=ifelse(cog < 0, cog + 360, cog)/360*52))
+
+df_cog_by_state <- df_max %>%
+  group_by(state, lat, lon) %>%
+  summarize(
+    cog=weighted.mean.circular(circular(week/52*360, type="angles", units="degrees"), avg_cases),
+    .groups = 'drop'
+  ) %>%
+  mutate(
+     cog=ifelse(cog < 0, cog + 360, cog)/360*52
+  )
+
+cog_model <- lm(cog ~ lat, data = df_cog_by_state)
+
+new_lats <- seq(min(df_cog_by_state$lat, na.rm = TRUE), max(df_cog_by_state$lat, na.rm = TRUE), by = .02)
+
+ci_cog <- predict(cog_model, 
+              newdata = data.frame(lat = new_lats), 
+              interval = 'confidence', 
+              level = .95)
+
+
 ```
 
 ```{r}
+plot(df_cog_by_state$lat, df_cog_by_state$cog, 
+      pch = 21, 
+      col = '#e11383',
+      bg = '#e11383',
+      xlab = 'Latitude',
+      ylab = 'COG of peak cases'
+     )
+
+abline(cog_model, col = '#F5821F', lwd = 2)
+polygon(c(new_lats, rev(new_lats)), c(ci_cog[,2], rev(ci_cog[,3])), col = '#F5821F80', border = NA) 
+
 
 ```
+```{r}
+summary(cog_model)$r.squared
+
+```
+
+The R^2 is much higher for COG vs. latitude (~.59) than for average peak week vs. latitude (~.1). The COG approach differs from the peak week calculation in that it circularizes the week counts over the year and incorporates a weighted average. The circularity of the COG approach isn't necessarily important in this application because the peak isn't at the very end/beginning of the year (i.e. similarity between week 51 and week 1 isn't directly relevant here, where the peaks are in the late summer or fall. I think the main benefit of the COG approach is therefore the weighting, which more accurately estimates the center of the annual epidemic in each state, while the single peak week may be a noisier signal, even over a number of years. 
 
 ### 5) Make an image.plot of weekly average time series for each location, ordered by latitude and normalized by dividing by the maximum for each state. Hint: the image.plot function in the "fields" package is how I make these, but there are other options...
 
 ```{r}
+library(ggplot2)
+library(tidyr)
+library(tibble)
 
+df_max_norm <- df_max %>%
+  group_by(state, lat, lon) %>%
+  mutate(
+    max_cases = max(avg_cases, na.rm = TRUE),
+    normalized_cases = avg_cases/max_cases
+  ) %>%
+  arrange(lat)
 
+ggplot(df_max_norm, aes(x = week, y = state, fill = normalized_cases)) + 
+  geom_tile(color = 'white', linewidth = 0) +
+  
+  scale_fill_gradient(
+    low = 'lightblue',
+    high = 'red4', 
+    name = 'Normalized cases'
+  ) + 
+  scale_x_continuous(
+    limits = c(1, 53),
+    expand = c(0, 0)) + 
+  
+  labs(
+    title = 'Endemic peak timing by state',
+    #subtitle = 'subtitle', 
+    x = 'week', 
+    y = 'state'
+  ) +
+  theme(
+    axis.text.y = element_text(size = 7),
+    axis.text.x = element_text(angle = 90, vjust = 0.5)
+  )
 ```
+state_names <- rownames(pivot_max_norm)
+week_numbers <- as.numeric(colnames(pivot_max_norm))
 
+max_matrix <- as.matrix(data.frame(lapply(pivot_max_norm, as.numeric)))
+
+rownames(max_matrix) <- seq(1, length(unique(rownames(pivot_max_norm))), 1)
+colnames(max_matrix) <- week_numbers
+
+image.plot(
+  x = colnames(max_matrix),
+  y= rownames(max_matrix),
+  z = max_matrix,
+  col = heat.colors(100),
+  xlab = 'week',
+  ylab = 'state (S-N)',
+  axes = FALSE
+)
+```
+```{r}
+
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(fields)
+
+# Re-run your preparation steps to ensure the pivot_max_norm_df has row names
+pivot_max_norm_df <- df_max %>%
+  group_by(state, lat, lon) %>%
+  mutate(
+    max_cases = max(avg_cases, na.rm = TRUE),
+    normalized_cases = avg_cases / max_cases
+  ) %>%
+  arrange(lat) %>%
+  ungroup() %>% # Ungroup before pivoting
+  pivot_wider(
+    id_cols = state,
+    names_from = week,
+    values_from = normalized_cases,
+    values_fill = 0 # Ensures no NA values are introduced during the pivot
+  ) %>%
+  # Crucially, ensure state column is ordered by latitude and set as row names
+  mutate(state = factor(state, levels = unique(state))) %>%
+  column_to_rownames(var = 'state')
+
+# 1. CRITICAL STEP: Extract Row Names (States) and Column Names (Weeks)
+state_names <- rownames(pivot_max_norm_df)
+
+# Convert column names (week numbers) from character strings to a NUMERIC vector
+week_numbers <- as.numeric(colnames(pivot_max_norm_df))
+
+# 2. Convert Data Frame to a Pure NUMERIC Matrix
+# This step is the key to fixing the "non-finite" error.
+data_matrix <- as.matrix(data.frame(lapply(pivot_max_norm_df, as.numeric)))
+
+# 3. Final Check: Ensure the matrix contains only finite numbers
+# (Necessary if any issues slipped past values_fill=0 or the numeric conversion)
+data_matrix[!is.finite(data_matrix)] <- 0
+
+# 4. Create the Image Plot
+image.plot(
+  x = week_numbers,          # Must be a numeric vector (1, 2, 3, ...)
+  y = 1:nrow(data_matrix),   # Must be a numeric index vector (1, 2, 3, ...)
+  z = data_matrix,           # Must be a pure numeric matrix
+  col = heat.colors(100),    # Color palette
+  xlab = 'Epidemic Week',
+  ylab = 'State (Sorted South to North)',
+  main = "Disease Seasonality by State Latitude (Normalized Cases)",
+  axes = FALSE               # Disable default axes for custom labeling
+)
+
+# 5. Add Custom Axes
+# X-axis (Weeks)
+axis(1, 
+     at = week_numbers[seq(1, length(week_numbers), by = 5)], # Show every 5th week label
+     labels = week_numbers[seq(1, length(week_numbers), by = 5)], 
+     las = 2) 
+
+# Y-axis (States)
+axis(2, 
+     at = 1:nrow(data_matrix), 
+     labels = state_names, # Use the saved state names
+     las = 1, 
+     cex.axis = 0.5)
+```
 ### 5) Calculate the epidemic intensity for each location using the code snippet below/ Plot intensity against latitude.
 ```{r}
 ps <- cases/sum(cases) $# where cases are weekly average cases for a location for weeks 1 to 52 (drop week 53)

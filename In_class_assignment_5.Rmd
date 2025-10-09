@@ -1,0 +1,180 @@
+---
+title: "Assignment5"
+output: html_document
+date: "2024-10-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 1) Below is code to run an SEIR model with seasonal forcing, demography and pediatric vaccine. "tvacc" defines the time of the vaccine in years and "puse" is the proportion vaccinated. We remove the first 90 years and add vaccination in year 95. Run the model, what do you observe?
+
+```{r}
+require("deSolve")
+seirmod = function(t, startconds, parms) {
+    S = startconds[1]
+    E = startconds[2]
+    I = startconds[3]
+    R = startconds[4]
+    mu = parms["mu"]
+    beta0 = parms["beta0"]
+    beta1 = parms["beta1"]
+    sigma = parms["sigma"]
+    gamma = parms["gamma"]
+    puse = parms["puse"]
+    tvacc = parms["tvacc"]
+    
+    beta = beta0 *(1 + beta1 * cos(2*pi*t))
+    if(t > tvacc){p = puse}else{p = 0} # when time is greater than tvacc, vaccinations are introduced with efficacy pvacc
+    
+    dS = mu*(1 - p) - beta * S * I - mu * S
+    dE = beta * S * I -sigma * E - mu * E
+    dI = sigma * E -  gamma * I - mu * I
+    dR = gamma * I - mu * R + p*mu
+    res = c(dS, dE, dI, dR)
+    list(res)
+}
+
+times = seq(0, 110, by = 1/120)
+parms = c(mu = 1/50, beta0 = 1000, beta1 = 0.1, sigma = 365/8, gamma = 365/5, tvacc = 95, puse = 0.7)
+startconds = c(S = 0.06, E = 0, I = 0.001, R = 0.939)
+out = as.data.frame(ode(startconds, times, seirmod, parms))
+
+out_sub <- out[out$time > 90,]
+plot(out_sub$time, out_sub$I, type = "l")
+
+```
+The introduction of the vaccine leads to lower, rarer, epidemic peaks in a somewhat regular 5-year pattern, but does not eradicate the disease entirely. 
+
+### 2 a) Update the model to include vaccine coverage of 90%. What do you observe?
+
+```{r}
+parms['puse'] <- .9
+out_puse90 = as.data.frame(ode(startconds, times, seirmod, parms))
+
+out_puse90_sub <- out_puse90[out_puse90$time > 90,]
+plot(out_puse90_sub$time, out_puse90_sub$I, type = "l")
+```
+Now, the introduction of the vaccine eradicates the disease entirely. 
+
+### 2 b) Assume R0 is given by (sigma/(sigma + mu))*(1/(mu + gamma))*beta0, what is the critical proportion for this model (you can assume the equation for the critical proportion is the same as the SIR model with demography).
+
+Critical proportion = 1-1/R0. 
+
+
+```{r}
+sigma <- parms['sigma']
+mu <- parms['mu']
+gamma <- parms['gamma']
+beta0 <- parms['beta0']
+
+R0 <- sigma/(sigma+mu)*(1/(mu+gamma))*beta0
+CP <- unname(1-1/R0)
+CP
+```
+
+### 3a) Assume vaccination covereage is 90%, however, the CDC only vaccinates the population for two years from 95 to 97. Update the model to explore the effects of this short vaccination period. Plot the I time series and compare this to your results from Question 2a. What is the public health implication of this?
+
+```{r}
+seirmod = function(t, startconds, parms) {
+    S = startconds[1]
+    E = startconds[2]
+    I = startconds[3]
+    R = startconds[4]
+    mu = parms["mu"]
+    beta0 = parms["beta0"]
+    beta1 = parms["beta1"]
+    sigma = parms["sigma"]
+    gamma = parms["gamma"]
+    puse = parms["puse"]
+    tvacc = parms["tvacc"]
+    tvacc1 = parms["tvacc1"]
+
+    beta = beta0 *(1 + beta1 * cos(2*pi*t))
+    if(t > tvacc & t < tvacc1){p = puse}else{p = 0} # when time is greater than tvacc, vaccinations are introduced with efficacy pvacc
+    
+    dS = mu*(1 - p) - beta * S * I - mu * S
+    dE = beta * S * I -sigma * E - mu * E
+    dI = sigma * E -  gamma * I - mu * I
+    dR = gamma * I - mu * R + p*mu
+    res = c(dS, dE, dI, dR)
+    list(res)
+}
+
+times = seq(0, 110, by = 1/120)
+parms = c(mu = 1/50, beta0 = 1000, beta1 = 0.1, sigma = 365/8, gamma = 365/5, tvacc = 95, tvacc1 = 97, puse = 0.9)
+startconds = c(S = 0.06, E = 0, I = 0.001, R = 0.939)
+out = as.data.frame(ode(startconds, times, seirmod, parms))
+
+out_sub <- out[out$time > 90,]
+plot(out_sub$time, out_sub$I, type = "l")
+
+
+```
+### 3b) Update the times vector to run this same model for 200 years, only keeping the 90% coverage vaccine in place from 95 to 97. Plot the I time series and the S-I phase plane, what do you observe? 
+
+
+```{r}
+times = seq(0, 200, by = 1/120)
+out = as.data.frame(ode(startconds, times, seirmod, parms))
+
+out_sub <- out[out$time > 90,]
+plot(out_sub$time, out_sub$I, type = "l")
+plot(out_sub$I, out_sub$S, type = "l")
+```
+
+### 3c) Repeat the model run (i.e. 200 years with vaccination between 95 and 97) above but assume vaccination coverage is now only 40%. What do you observe?
+
+```{r}
+parms['puse'] <- .4
+
+out = as.data.frame(ode(startconds, times, seirmod, parms))
+
+out_sub <- out[out$time > 90,]
+plot(out_sub$time, out_sub$I, type = "l")
+plot(out_sub$I, out_sub$S, type = "l")
+```
+
+### 4) Masking and other non-pharmaceutical interventions (NPIs) impact transmission directly. Update your model to include NPIs as reduction in beta of 80% for one year from 95 - 96. What do you observe (just run the model from years 0 to 110 and as usual remove the first 90 years)?
+
+```{r}
+seirmod = function(t, startconds, parms) {
+    S = startconds[1]
+    E = startconds[2]
+    I = startconds[3]
+    R = startconds[4]
+    mu = parms["mu"]
+    beta0 = parms["beta0"]
+    beta1 = parms["beta1"]
+    sigma = parms["sigma"]
+    gamma = parms["gamma"]
+    puse = parms["puse"]
+    tnpi = parms['tnpi']
+    tnpi1 = parms['tnpi1']
+    tvacc = parms["tvacc"]
+    tvacc1 = parms["tvacc1"]
+    
+    beta_calc = beta0 *(1 + beta1 * cos(2*pi*t))
+    beta_reduced = .8*beta_calc
+    if(t < tnpi & t < tnpi1){beta = beta_reduced}else{beat}
+    if(t > tvacc & t < tvacc1){p = puse}else{p = 0} # when time is greater than tvacc, vaccinations are introduced with efficacy pvacc
+    
+    dS = mu*(1 - p) - beta * S * I - mu * S
+    dE = beta * S * I -sigma * E - mu * E
+    dI = sigma * E -  gamma * I - mu * I
+    dR = gamma * I - mu * R + p*mu
+    res = c(dS, dE, dI, dR)
+    list(res)
+}
+
+times = seq(0, 110, by = 1/120)
+parms = c(mu = 1/50, beta0 = 1000, beta1 = 0.1, sigma = 365/8, gamma = 365/5, tvacc = 95, tvacc1 = 97, puse = 0.9)
+startconds = c(S = 0.06, E = 0, I = 0.001, R = 0.939)
+out = as.data.frame(ode(startconds, times, seirmod, parms))
+
+out_sub <- out[out$time > 90,]
+plot(out_sub$time, out_sub$I, type = "l")
+
+```
+

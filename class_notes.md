@@ -362,3 +362,28 @@ N &=& S+I+R+V\\
 $$
 We find that $R_0 = \frac{\beta}{\gamma +\mu}$, and doing the same steps as above for other variations of the SIR model, that the critical proportion of vaccination required to eliminate the disease is $1-\frac{1}{R_0}$. That is, that as long as vaccination is fully/permanently immunizing, it solves the problem of waning immunity. 
 - Consider further that this is *pediatric* vaccination -- what would a model of mass vaccination suggest?
+
+## SIR with mass vaccination
+![[SIR_mass_vaccination_dag.png]]
+
+$$
+\begin{eqnarray}
+\frac{dS}{dt} &=& \mu -\beta SI - \mu S -vS\\
+\frac{dI}{dt} &=& I(\beta S -\gamma -\mu)\\
+\frac{dR}{dt} &=& \gamma I -\mu R +vS \\
+\end{eqnarray}
+$$
+$$
+S^* = \frac{1}{R_0}
+$$
+$$
+\frac{dS}{dt} = 0 \rightarrow \text{solve for }I^* \rightarrow I^* = \frac{R_0\mu-\mu-V}{\beta}
+$$
+$$
+I^* = 0 \rightarrow V_c = \mu(R_0-1)
+$$
+The critical proportion becomes a rate. This can be massaged into something that looks like the previous critical proportion, 
+$$
+v_cS^* = \mu(1-\frac{1}{R_0})
+$$
+
