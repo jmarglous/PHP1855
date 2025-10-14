@@ -267,7 +267,6 @@ Different types of outbreak (annual, biannual, chaotic) require different respon
 	Typically serology for immunity is the best way to assess the susceptible population. 
 
 ## SIR model with waning immunity
-(We explored this in the homework)
 ### Definition
 $$
 \begin{eqnarray}
@@ -275,12 +274,13 @@ $$
 \frac{dI}{dt} &=& I(\beta S -\gamma )\\
 \frac{dR}{dt} &=& \gamma I -\omega R
 \end{eqnarray}
-$$![[SIRS_dag.jpg]]
-### R0 calculation
+$$
+![[SIRS_dag.jpg]]
+### R0 Calculation
 $$
 R_0 \equiv \frac{\beta}{\gamma}
 $$
-### Equilibrium 
+### Equilibrium
 Equilibrium values:
 $$
 S^* = \frac{\gamma}{\beta} = \frac{1}{R_0}
@@ -289,6 +289,23 @@ $$
 	I^* = \frac{\omega}{\omega + \gamma}(1-\frac{1}{R_0})
 $$
 Same thing as we showed for model with demography -- at equilibrium there is some non-zero onward transmission. 
+
+### Vaccination at birth
+Assume a fraction of newborns $\rho$ are vaccinated at birth and pass immediately into the Recovered category.
+$$
+\begin{eqnarray}
+\frac{dS}{dt} &=& (1-\rho)\mu -\beta SI - \mu S\\
+\frac{dI}{dt} &=& I(\beta S -\gamma -\mu)\\
+\frac{dR}{dt} &=& \gamma I -\mu R + \rho\mu
+\end{eqnarray}
+$$
+![[SIR_vaccination_dag.png]]
+### What is the proportion to vaccinate to eradicate infection?
+
+### Vaccination at Birth with waning immunity
+## SIR with mass vaccination
+
+
 
 ## Vaccination at birth
 Assume a fraction of newborns $\rho$ are vaccinated at birth and pass immediately into the Recovered category.
